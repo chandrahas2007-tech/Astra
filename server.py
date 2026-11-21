@@ -9,11 +9,14 @@ Run:
 Open:
     http://localhost:8000
 
-[ASTRA patch] marks the lines changed to connect this server with the
-data-integration pipeline (data/dashboard.json) and the page loader (astra-data.js).
+Endpoints:
+    /api/stats       satellite counts from the CelesTrak SATCAT
+    /api/satellites  searchable satellite list
+    /api/gp          orbital elements (active + debris) for the 3D globe
 """
 
 import csv
+import gzip
 import io
 import json
 import os
@@ -28,23 +31,46 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 URL = "https://celestrak.org/pub/satcat.csv"
 CACHE_SECONDS = 6 * 3600
-RETRY_SECONDS = 15 * 60  # [ASTRA patch] wait this long after a failed download
+
+# ---- Orbital elements for the 3D globe -------------------------------------
+# CelesTrak asks users not to download the same data more than once per 2 hours.
+GP_URL = "https://celestrak.org/NORAD/elements/gp.php?FORMAT=json&GROUP="
+GP_CACHE_SECONDS = 2 * 3600
+
+# Famous breakup / collision debris clouds
+DEBRIS_GROUPS = [
+    "fengyun-1c-debris",   # 2007 anti-satellite test
+    "cosmos-2251-debris",  # 2009 Iridium-Cosmos collision
+    "iridium-33-debris",   # 2009 Iridium-Cosmos collision
+    "cosmos-1408-debris",  # 2021 anti-satellite test
+]
+
+# Only the fields satellite.js needs, to keep the payload small
+GP_FIELDS = (
+    "OBJECT_NAME", "OBJECT_ID", "NORAD_CAT_ID", "EPOCH",
+    "MEAN_MOTION", "ECCENTRICITY", "INCLINATION", "RA_OF_ASC_NODE",
+    "ARG_OF_PERICENTER", "MEAN_ANOMALY", "EPHEMERIS_TYPE",
+    "CLASSIFICATION_TYPE", "ELEMENT_SET_NO", "REV_AT_EPOCH",
+    "BSTAR", "MEAN_MOTION_DOT", "MEAN_MOTION_DDOT",
+)
 
 ACTIVE_CODES = {"+", "P", "B", "S", "X"}
 
-# [ASTRA patch] the only extra files the server may hand out (no open file access)
-STATIC_FILES = {
-    "/astra-data.js": ("astra-data.js", "text/javascript; charset=utf-8"),
-    "/data/dashboard.json": ("data/dashboard.json", "application/json; charset=utf-8"),
-}
-
 _lock = threading.Lock()
+_gp_lock = threading.Lock()
 
 _cache = {
     "t": 0,
     "rows": [],
     "source": "none",
-    "retry_at": 0,  # [ASTRA patch]
+}
+
+_gp = {
+    "t": 0,
+    "active": [],
+    "debris": [],
+    "source": "none",
+    "updated": None,
 }
 
 
@@ -125,15 +151,8 @@ def load():
 
     with _lock:
 
-        now = time.time()
-
         # Use cache if fresh
-        if _cache["rows"] and now - _cache["t"] < CACHE_SECONDS:
-            return _cache
-
-        # [ASTRA patch] after a failed download, do not retry on every request
-        # (CelesTrak blocks clients that download too often)
-        if now < _cache["retry_at"]:
+        if _cache["rows"] and time.time() - _cache["t"] < CACHE_SECONDS:
             return _cache
 
         try:
@@ -165,7 +184,6 @@ def load():
                 "t": time.time(),
                 "rows": rows,
                 "source": "celestrak",
-                "retry_at": 0,
             })
 
             print(f"Loaded {len(rows)} payloads")
@@ -174,20 +192,90 @@ def load():
 
             print("Catalogue download failed:", error)
 
-            _cache["retry_at"] = time.time() + RETRY_SECONDS  # [ASTRA patch]
-
             # Retain previous valid data
             if _cache["rows"]:
                 print("Using previous cached data")
 
             else:
-                # [ASTRA patch] t stays 0 so the API reports "Unavailable"
                 _cache.update({
+                    "t": time.time(),
                     "rows": [],
                     "source": "unavailable",
                 })
 
         return _cache
+
+
+def fetch_group(group):
+    """Download one CelesTrak GP group as trimmed OMM JSON records."""
+
+    req = Request(
+        GP_URL + group,
+        headers={"User-Agent": "Mozilla/5.0 SatelliteTracker/1.0"},
+    )
+
+    with urlopen(req, timeout=60) as response:
+        text = response.read().decode("utf-8", errors="replace")
+
+    data = json.loads(text)
+
+    if not isinstance(data, list):
+        raise ValueError("Unexpected GP response for " + group)
+
+    return [
+        {k: obj[k] for k in GP_FIELDS if k in obj}
+        for obj in data
+    ]
+
+
+def load_gp():
+    """Orbital elements for the globe, cached for 2 hours."""
+
+    with _gp_lock:
+
+        if _gp["active"] and time.time() - _gp["t"] < GP_CACHE_SECONDS:
+            return _gp
+
+        # Do not hammer CelesTrak after a failure: retry in 5 minutes
+        if not _gp["active"] and _gp["t"] and time.time() - _gp["t"] < 300:
+            return _gp
+
+        try:
+            print("Downloading orbital elements...")
+
+            active = fetch_group("active")
+
+            debris = []
+            for group in DEBRIS_GROUPS:
+                try:
+                    debris.extend(fetch_group(group))
+                except Exception as error:
+                    print(f"Skipping {group}:", error)
+
+            _gp.update({
+                "t": time.time(),
+                "active": active,
+                "debris": debris,
+                "source": "celestrak",
+                "updated": time.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+                ),
+            })
+
+            print(f"Loaded {len(active)} active, {len(debris)} debris")
+
+        except Exception as error:
+            print("Orbital element download failed:", error)
+
+            if _gp["active"]:
+                print("Using previous cached orbital data")
+            else:
+                _gp.update({
+                    "t": time.time(),
+                    "source": "unavailable",
+                })
+
+        return _gp
 
 
 def stats():
@@ -307,27 +395,19 @@ class Handler(BaseHTTPRequestHandler):
 
         body = json.dumps(data).encode("utf-8")
 
+        gzipped = (
+            len(body) > 50000
+            and "gzip" in self.headers.get("Accept-Encoding", "")
+        )
+
+        if gzipped:
+            body = gzip.compress(body, 5)
+
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        if gzipped:
+            self.send_header("Content-Encoding", "gzip")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.end_headers()
-
-        self.wfile.write(body)
-
-    def send_static(self, rel_path, content_type):
-        """[ASTRA patch] serve one whitelisted file from next to server.py."""
-
-        try:
-            with open(os.path.join(HERE, rel_path), "rb") as file:
-                body = file.read()
-        except FileNotFoundError:
-            return self.send_json(404, {"error": rel_path + " not found"})
-
-        self.send_response(200)
-        self.send_header("Content-Type", content_type)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-cache")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
 
@@ -342,15 +422,20 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/stats":
                 return self.send_json(200, stats())
 
+            if url.path == "/api/gp":
+                gp = load_gp()
+                return self.send_json(200, {
+                    "source": gp["source"],
+                    "updated": gp["updated"],
+                    "active": gp["active"],
+                    "debris": gp["debris"],
+                })
+
             if url.path == "/api/satellites":
                 return self.send_json(
                     200,
                     query(parse_qs(url.query))
                 )
-
-            if url.path in STATIC_FILES:  # [ASTRA patch]
-                rel_path, content_type = STATIC_FILES[url.path]
-                return self.send_static(rel_path, content_type)
 
             if url.path in ("/", "/index.html"):
 
@@ -392,6 +477,9 @@ if __name__ == "__main__":
 
     print("Starting Satellite Tracker...")
     load()
+
+    # Warm the orbital-element cache in the background
+    threading.Thread(target=load_gp, daemon=True).start()
 
     print(f"Server running at http://localhost:{PORT}")
 

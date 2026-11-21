@@ -37,6 +37,14 @@ edit("moon mesh", r'''    const moon=new THREE.Mesh(new THREE.SphereGeometry(173
     loader.load('https://threejs.org/examples/textures/planets/moon_1024.jpg',function(tex){
       moonMat.map=tex;moonMat.bumpMap=tex;moonMat.needsUpdate=true;
     },undefined,function(){});
+
+// Mars in the Earth view: true geocentric direction, compressed distance, exaggerated size
+const MARS_VIEW=110;   // scene units (Moon orbit is about 60)
+const marsE=new THREE.Mesh(new THREE.SphereGeometry(3,32,32),new THREE.MeshPhongMaterial({color:0xc1440e,shininess:4}));
+gE.add(marsE);
+const marsLineGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+const marsLine=new THREE.Line(marsLineGeo,new THREE.LineBasicMaterial({color:0xfb7185,transparent:true,opacity:.35}));
+marsLine.frustumCulled=false;gE.add(marsLine);
     const mx=new THREE.Vector3(),my=new THREE.Vector3(),mz=new THREE.Vector3(),mBasis=new THREE.Matrix4();''')
 
 # 2. Tidal locking: the near side always faces Earth

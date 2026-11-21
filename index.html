@@ -281,8 +281,8 @@ footer h2{margin:0 auto 16px;max-width:none}
 </div></footer>
 
 <!-- 3D globe libraries: Three.js (rendering) and satellite.js (SGP4 orbit propagation) -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
 
 <script>
@@ -332,8 +332,12 @@ footer h2{margin:0 auto 16px;max-width:none}
   const info=document.getElementById('globeInfo');
   const INFO_DEFAULT=info.textContent;
 
-  if(!window.THREE||!window.satellite||!THREE.OrbitControls){
-    statusEl.textContent='3D libraries could not load. Check your internet connection and reload.';
+  const missing=[];
+  if(!window.THREE)missing.push('Three.js');
+  else if(!THREE.OrbitControls)missing.push('OrbitControls');
+  if(!window.satellite)missing.push('satellite.js');
+  if(missing.length){
+    statusEl.textContent='Could not load: '+missing.join(', ')+'. Check your internet connection and reload.';
     return;
   }
 

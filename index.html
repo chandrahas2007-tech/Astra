@@ -78,6 +78,9 @@ p.lead{color:var(--muted);font-size:18px;max-width:60ch}
 .globe-info td:last-child{text-align:right;color:var(--text)}
 .globe-status{position:absolute;left:16px;bottom:14px;font-size:12px;color:var(--muted);z-index:3;max-width:calc(100% - 320px)}
 @media(max-width:700px){.globe-status{bottom:auto;top:56px;max-width:calc(100% - 32px)}.gtime{margin-left:0}}
+.eqtip{position:absolute;display:none;z-index:5;max-width:340px;pointer-events:none;background:rgba(10,18,34,.97);border:1px solid var(--cyan);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--muted)}
+.eq{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text);margin:4px 0}
+.eqsub{margin-top:6px;font-size:11px}
 /* dashboard */
 .dash{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:22px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
@@ -117,8 +120,8 @@ footer h2{margin:0 auto 16px;max-width:none}
 <nav><div class="wrap">
   <a href="#hero" class="logo">ASTRA</a>
   <ul>
-    <li><a href="#problem">Problem</a></li><li><a href="#fit">Where it fits</a></li><li><a href="#features">Features</a></li>
-    <li><a href="#globe">Live orbit</a></li><li><a href="#dashboard">Dashboard</a></li><li><a href="#how">How it works</a></li><li><a href="#learn">Learning</a></li>
+    <li><a href="#problem">Problem</a></li><li><a href="#features">Features</a></li>
+    <li><a href="#globe">Live orbit</a></li><li><a href="#dashboard">Dashboard</a></li><li><a href="#learn">Learning</a></li>
   </ul>
 </div></nav>
 
@@ -135,27 +138,6 @@ footer h2{margin:0 auto 16px;max-width:none}
 
 <section id="problem"><div class="wrap reveal">
   <p class="problem">Online platform to experience space incidents virtually</p>
-</div></section>
-
-<section id="fit"><div class="wrap reveal">
-  <div class="eyebrow">Where Astra fits</div>
-  <h2>Existing tracking systems show orbits</h2>
-  <div class="grid g2">
-    <div class="card">
-      <div class="num">WHAT EXISTS</div>
-      <div class="tags" style="margin:6px 0 14px"><span class="tag">CelesTrak</span><span class="tag">LeoLabs LeoTrack</span><span class="tag">NASA CARA</span><span class="tag">NASA Starling</span></div>
-      <p class="muted">They provide 3D views of orbits and satellites.</p>
-    </div>
-    <div class="card miss">
-      <div class="num">WHAT IS MISSING</div>
-      <ul>
-        <li><b>Research and developmental use of space incidents</b><br>Not built for R&amp;D workflows.</li>
-        <li><b>Learning from real incidents</b><br>Not built for teaching and outreach.</li>
-        <li><b>Risk by object, orbit and trajectory</b><br>Astra adds this view on top of public catalogue data.</li>
-      </ul>
-    </div>
-  </div>
-  <p class="note">Astra does not replace these systems. It uses the information they publish and adds an analysis and teaching layer.</p>
 </div></section>
 
 <section id="features"><div class="wrap reveal">
@@ -175,16 +157,21 @@ footer h2{margin:0 auto 16px;max-width:none}
   <div class="globe-box">
     <div id="globeCanvas"></div>
     <div class="gctl">
+      <button class="gbtn on" data-mode="earth">Earth &amp; Moon</button>
+      <button class="gbtn" data-mode="solar">Earth &rarr; Mars</button>
+      <span class="gsep"></span>
       <button class="gbtn" data-speed="1">1×</button>
       <button class="gbtn on" data-speed="30">30×</button>
       <button class="gbtn" data-speed="120">120×</button>
-      <span class="gsep"></span>
-      <button class="gbtn on" id="gDebrisBtn">Debris</button>
+      <span class="gsep earthonly"></span>
+      <button class="gbtn earthonly" id="gViewBtn">Zoom out to Moon</button>
+      <button class="gbtn on earthonly" id="gDebrisBtn">Debris</button>
       <button class="gbtn" id="gSpinBtn">Auto-rotate</button>
       <span class="gtime" id="gTime">--</span>
     </div>
+    <div class="eqtip" id="eqTip"></div>
     <div class="globe-status" id="globeStatus">Loading orbital data…</div>
-    <div class="globe-info" id="globeInfo">Drag to rotate, scroll to zoom, click a dot for details.</div>
+    <div class="globe-info" id="globeInfo">Drag to rotate, scroll to zoom, click a dot for details, hover an orbit line for its equation.</div>
   </div>
   <div class="kpis" style="margin:18px 0 0">
     <div class="kpi c"><small>Active objects shown</small><strong id="gActive">–</strong></div>
@@ -221,19 +208,6 @@ footer h2{margin:0 auto 16px;max-width:none}
     </div>
     <p class="demo">Illustrative sample data for the concept. Real values come from public satellite catalogues.</p>
   </div>
-</div></section>
-
-<section id="how"><div class="wrap reveal">
-  <div class="eyebrow">How it works</div>
-  <h2>From public catalogues to risk dashboard</h2>
-  <div class="pipe" id="pipe">
-    <div class="step on" data-d="Public satellite catalogues and real incident records."><div class="num">01</div><h3>Collect</h3></div>
-    <div class="step" data-d="Normalise records and flag stale tracking data."><div class="num">02</div><h3>Clean</h3></div>
-    <div class="step" data-d="Send data to professional tools or AI to propagate orbits and uncertainty."><div class="num">03</div><h3>Propagate</h3></div>
-    <div class="step" data-d="Score objects and zones using concepts drawn from real space incidents."><div class="num">04</div><h3>Score</h3></div>
-    <div class="step" data-d="Build learning modules and 3D presentations for students."><div class="num">05</div><h3>Display</h3></div>
-  </div>
-  <div class="step-detail" id="pipeDetail">Public satellite catalogues and real incident records.</div>
 </div></section>
 
 <section id="why"><div class="wrap reveal">
@@ -343,290 +317,6 @@ window.libsReady=(async function(){
   addEventListener('resize',()=>{size()});
   size();init();draw();
 })();
-
-// ---------------------------------------------------------------------------
-// Live 3D globe: real orbital elements from CelesTrak, propagated with SGP4
-// ---------------------------------------------------------------------------
-(function(){
-  const box=document.getElementById('globeCanvas');
-  const statusEl=document.getElementById('globeStatus');
-  const info=document.getElementById('globeInfo');
-  const INFO_DEFAULT=info.textContent;
-
-  statusEl.textContent='Loading 3D libraries…';
-  window.libsReady.then(initGlobe).catch(function(e){
-    statusEl.textContent='Could not load '+e.message+'. Check your internet connection or ad blocker and reload.';
-  });
-
-  function initGlobe(){
-
-  const RE=6371, S=1/RE, MU=398600.4418;     // Earth radius (km), km -> scene units, Earth gravitational parameter
-  const MAX_ACTIVE=2500, MAX_DEBRIS=1500;    // dots drawn, to keep the page smooth
-  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-  let renderer;
-  try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});}
-  catch(e){statusEl.textContent='WebGL is not available in this browser.';return;}
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
-  box.appendChild(renderer.domElement);
-
-  const scene=new THREE.Scene();
-  const camera=new THREE.PerspectiveCamera(45,1,0.01,200);
-  camera.position.set(0,1.6,4);
-  // Small built-in orbit controls: drag to rotate, wheel to zoom
-  const controls=(function(){
-    const el=renderer.domElement,o={autoRotate:false};
-    let th=0.4,ph=1.2,dist=4.3,vt=0,vp=0,drag=null;
-    el.style.touchAction='none';
-    el.addEventListener('pointerdown',function(e){drag=[e.clientX,e.clientY];vt=vp=0;try{el.setPointerCapture(e.pointerId);}catch(_){}});
-    el.addEventListener('pointermove',function(e){
-      if(!drag)return;
-      vt=-(e.clientX-drag[0])*.005*(dist/4);vp=-(e.clientY-drag[1])*.005*(dist/4);
-      th+=vt;ph=Math.min(3.09,Math.max(.05,ph+vp));drag=[e.clientX,e.clientY];
-    });
-    const end=function(){drag=null;};
-    el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
-    el.addEventListener('wheel',function(e){e.preventDefault();dist=Math.min(16,Math.max(1.5,dist*Math.exp(e.deltaY*.001)));},{passive:false});
-    o.update=function(){
-      if(!drag){th+=vt;ph=Math.min(3.09,Math.max(.05,ph+vp));vt*=.92;vp*=.92;if(o.autoRotate)th+=.003;}
-      camera.position.set(dist*Math.sin(ph)*Math.sin(th),dist*Math.cos(ph),dist*Math.sin(ph)*Math.cos(th));
-      camera.lookAt(0,0,0);
-    };
-    return o;
-  })();
-
-  function resize(){
-    const w=box.clientWidth,h=box.clientHeight;
-    if(!w||!h)return;
-    renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
-  }
-  new ResizeObserver(resize).observe(box);resize();
-
-  // Lighting
-  scene.add(new THREE.AmbientLight(0xffffff,.75));
-  const sun=new THREE.DirectionalLight(0xffffff,1.1);sun.position.set(5,2,3);scene.add(sun);
-
-  // Earth (texture loads from the three-globe sample images; blue sphere if it cannot)
-  const earthMat=new THREE.MeshPhongMaterial({color:0x1d4ed8,shininess:8});
-  const earth=new THREE.Mesh(new THREE.SphereGeometry(1,64,64),earthMat);
-  scene.add(earth);
-  const loader=new THREE.TextureLoader();loader.setCrossOrigin('anonymous');
-  loader.load('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg',tex=>{
-    earthMat.map=tex;earthMat.color.set(0xffffff);earthMat.needsUpdate=true;
-  },undefined,()=>{});
-  // Thin atmosphere glow
-  scene.add(new THREE.Mesh(new THREE.SphereGeometry(1.025,48,48),
-    new THREE.MeshBasicMaterial({color:0x4ea8ff,transparent:true,opacity:.13,side:THREE.BackSide,depthWrite:false})));
-
-  // Background stars
-  (function(){
-    const n=1500,p=new Float32Array(n*3);
-    for(let i=0;i<n;i++){
-      const u=Math.random()*2-1,t=Math.random()*6.2832,r=Math.sqrt(1-u*u),R=80;
-      p[i*3]=R*r*Math.cos(t);p[i*3+1]=R*u;p[i*3+2]=R*r*Math.sin(t);
-    }
-    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));
-    scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x9fb4d6,size:.18,sizeAttenuation:true,transparent:true,opacity:.7})));
-  })();
-
-  // Round dot sprite
-  const dotTex=(function(){
-    const c=document.createElement('canvas');c.width=c.height=32;
-    const x=c.getContext('2d');x.fillStyle='#fff';x.beginPath();x.arc(16,16,14,0,6.2832);x.fill();
-    return new THREE.CanvasTexture(c);
-  })();
-
-  // ----- data -----
-  function sample(arr,max){
-    if(arr.length<=max)return arr;
-    const step=arr.length/max,out=[];
-    for(let i=0;i<max;i++)out.push(arr[Math.floor(i*step)]);
-    return out;
-  }
-
-  function makeLayer(items,color,size,kind){
-    const sats=[];
-    for(const o of items){
-      try{
-        const rec=satellite.json2satrec(o);
-        if(rec.error)continue;
-        sats.push({name:o.OBJECT_NAME||'Unknown',id:o.NORAD_CAT_ID,rec});
-      }catch(e){}
-    }
-    const pos=new Float32Array(sats.length*3);
-    const geo=new THREE.BufferGeometry();
-    geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-    geo.boundingSphere=new THREE.Sphere(new THREE.Vector3(),60); // positions change every tick; keep picking simple
-    const pts=new THREE.Points(geo,new THREE.PointsMaterial({color,size,map:dotTex,transparent:true,alphaTest:.2,depthWrite:false,sizeAttenuation:true}));
-    pts.frustumCulled=false;scene.add(pts);
-    return {kind,sats,pos,geo,pts};
-  }
-
-  // Fallback used only if neither the Astra server nor CelesTrak can be reached
-  function demoData(){
-    const epoch=new Date().toISOString().slice(0,-1);
-    const mk=(i,alt,inc,deb)=>{
-      const a=RE+alt,T=2*Math.PI*Math.sqrt(a*a*a/MU);
-      return {OBJECT_NAME:(deb?'DEMO DEBRIS ':'DEMO SAT ')+i,OBJECT_ID:'0000-000A',NORAD_CAT_ID:String(90000+i),EPOCH:epoch,
-        MEAN_MOTION:86400/T,ECCENTRICITY:Math.random()*.01,INCLINATION:inc,RA_OF_ASC_NODE:Math.random()*360,
-        ARG_OF_PERICENTER:Math.random()*360,MEAN_ANOMALY:Math.random()*360,EPHEMERIS_TYPE:0,CLASSIFICATION_TYPE:'U',
-        ELEMENT_SET_NO:999,REV_AT_EPOCH:1,BSTAR:0,MEAN_MOTION_DOT:0,MEAN_MOTION_DDOT:0};
-    };
-    const active=[],debris=[];
-    for(let i=0;i<700;i++)active.push(mk(i,400+Math.random()*1200,[53,70,97.5,28,51.6][i%5]+Math.random()*2,false));
-    for(let i=0;i<40;i++)active.push(mk(900+i,35786,Math.random()*3,false));
-    for(let i=0;i<500;i++)debris.push(mk(2000+i,700+Math.random()*500,[98.5,74,86.4,82.5][i%4]+Math.random()*1.5,true));
-    return {source:'demo',active,debris,updated:new Date().toISOString(),via:'built-in demo data (offline)'};
-  }
-
-  async function getJSON(u){const r=await fetch(u);if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
-
-  async function loadData(){
-    // 1) Astra's own server (cached, avoids browser CORS limits)
-    try{
-      const d=await getJSON('/api/gp');
-      if(d.active&&d.active.length)return Object.assign(d,{via:'CelesTrak via Astra server'});
-    }catch(e){}
-    // 2) CelesTrak directly from the browser
-    try{
-      const base='https://celestrak.org/NORAD/elements/gp.php?FORMAT=json&GROUP=';
-      const active=await getJSON(base+'active');
-      const groups=['fengyun-1c-debris','cosmos-2251-debris','iridium-33-debris','cosmos-1408-debris'];
-      const debris=(await Promise.all(groups.map(g=>getJSON(base+g).catch(()=>[])))).flat();
-      if(active.length)return {source:'celestrak',active,debris,updated:new Date().toISOString(),via:'CelesTrak (direct)'};
-    }catch(e){}
-    // 3) Offline demo
-    return demoData();
-  }
-
-  // ----- simulation state -----
-  let layers=[],speed=30,simMs=Date.now(),last=performance.now(),acc=0,cost=10,visible=true;
-  let selected=null,orbitLine=null;
-  const marker=new THREE.Mesh(new THREE.SphereGeometry(.018,16,16),new THREE.MeshBasicMaterial({color:0xffffff}));
-  marker.visible=false;scene.add(marker);
-  const timeEl=document.getElementById('gTime');
-
-  function updatePositions(){
-    const t0=performance.now(),d=new Date(simMs);
-    for(const L of layers){
-      const {sats,pos}=L;
-      for(let i=0;i<sats.length;i++){
-        let p=null;
-        try{p=satellite.propagate(sats[i].rec,d).position;}catch(e){}
-        if(p&&isFinite(p.x)){            // ECI (x,y,z) -> scene (x,z,-y) so Earth's axis points up
-          pos[i*3]=p.x*S;pos[i*3+1]=p.z*S;pos[i*3+2]=-p.y*S;
-        }else{pos[i*3]=pos[i*3+1]=pos[i*3+2]=0;}
-      }
-      L.geo.attributes.position.needsUpdate=true;
-    }
-    cost=performance.now()-t0;
-    timeEl.textContent=d.toISOString().slice(0,16).replace('T',' ')+' UTC';
-    updateSelected(d);
-  }
-
-  function updateSelected(d){
-    if(!selected)return;
-    const s=selected.layer.sats[selected.i],pv=satellite.propagate(s.rec,d);
-    if(!pv.position){return;}
-    const p=pv.position,v=pv.velocity;
-    marker.position.set(p.x*S,p.z*S,-p.y*S);marker.visible=true;
-    const alt=Math.hypot(p.x,p.y,p.z)-RE,spd=Math.hypot(v.x,v.y,v.z);
-    const incl=s.rec.inclo*180/Math.PI,period=2*Math.PI/s.rec.no;
-    info.innerHTML='<strong>'+esc(s.name)+'</strong>'
-      +'<span style="color:'+(selected.layer.kind==='debris'?'var(--amber)':'var(--cyan)')+'">'+(selected.layer.kind==='debris'?'Debris fragment':'Active satellite')+'</span>'
-      +'<table><tr><td>NORAD ID</td><td>'+esc(s.id)+'</td></tr>'
-      +'<tr><td>Altitude</td><td>'+Math.round(alt).toLocaleString()+' km</td></tr>'
-      +'<tr><td>Speed</td><td>'+spd.toFixed(2)+' km/s</td></tr>'
-      +'<tr><td>Inclination</td><td>'+incl.toFixed(1)+'°</td></tr>'
-      +'<tr><td>Orbit period</td><td>'+period.toFixed(1)+' min</td></tr></table>';
-  }
-
-  function drawOrbit(rec,d){
-    if(orbitLine){scene.remove(orbitLine);orbitLine.geometry.dispose();orbitLine=null;}
-    const periodMs=2*Math.PI/rec.no*60000,pts=[];
-    for(let k=0;k<=180;k++){
-      const p=satellite.propagate(rec,new Date(d.getTime()+k/180*periodMs)).position;
-      if(p)pts.push(new THREE.Vector3(p.x*S,p.z*S,-p.y*S));
-    }
-    if(pts.length<2)return;
-    orbitLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.55}));
-    scene.add(orbitLine);
-  }
-
-  function clearSelection(){
-    selected=null;marker.visible=false;info.textContent=INFO_DEFAULT;
-    if(orbitLine){scene.remove(orbitLine);orbitLine.geometry.dispose();orbitLine=null;}
-  }
-
-  // ----- picking (click a dot) -----
-  const ray=new THREE.Raycaster();ray.params.Points.threshold=.035;
-  let down=null;
-  renderer.domElement.addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];});
-  renderer.domElement.addEventListener('pointerup',e=>{
-    if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>5)return;
-    const r=renderer.domElement.getBoundingClientRect();
-    ray.setFromCamera(new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1),camera);
-    const eh=ray.intersectObject(earth)[0],limit=eh?eh.distance:Infinity;
-    let best=null;
-    for(const L of layers){
-      if(!L.pts.visible)continue;
-      for(const h of ray.intersectObject(L.pts)){
-        if(h.distance<limit&&(!best||h.distance<best.dist))best={layer:L,i:h.index,dist:h.distance};
-      }
-    }
-    if(!best){clearSelection();return;}
-    selected=best;
-    const d=new Date(simMs);drawOrbit(best.layer.sats[best.i].rec,d);updateSelected(d);
-  });
-
-  // ----- controls -----
-  document.querySelectorAll('.gbtn[data-speed]').forEach(b=>b.addEventListener('click',()=>{
-    speed=+b.dataset.speed;
-    document.querySelectorAll('.gbtn[data-speed]').forEach(o=>o.classList.toggle('on',o===b));
-  }));
-  document.getElementById('gDebrisBtn').addEventListener('click',e=>{
-    const on=e.currentTarget.classList.toggle('on');
-    for(const L of layers)if(L.kind==='debris')L.pts.visible=on;
-  });
-  document.getElementById('gSpinBtn').addEventListener('click',e=>{
-    controls.autoRotate=e.currentTarget.classList.toggle('on');
-  });
-  new IntersectionObserver(es=>{visible=es[0].isIntersecting;}).observe(box);
-
-  // ----- main loop -----
-  function frame(now){
-    requestAnimationFrame(frame);
-    const dt=Math.min(now-last,100);last=now;
-    if(!visible)return;
-    simMs+=dt*speed;
-    acc+=dt;
-    if(acc>Math.max(100,cost*3)){acc=0;updatePositions();}   // slow machines update less often
-    earth.rotation.y=satellite.gstime(new Date(simMs));      // Earth turns under the satellites
-    controls.update();
-    renderer.render(scene,camera);
-  }
-
-  loadData().then(d=>{
-    const act=sample(d.active||[],MAX_ACTIVE),deb=sample(d.debris||[],MAX_DEBRIS);
-    layers=[makeLayer(act,0x22d3ee,.022,'active'),makeLayer(deb,0xfbbf24,.018,'debris')];
-    document.getElementById('gActive').textContent=layers[0].sats.length.toLocaleString();
-    document.getElementById('gDebris').textContent=layers[1].sats.length.toLocaleString();
-    const when=d.updated?new Date(d.updated).toLocaleString():'unknown';
-    document.getElementById('gUpdated').textContent=d.source==='demo'?'Demo data':'Fetched '+when;
-    statusEl.textContent='Source: '+d.via+(d.active.length>MAX_ACTIVE?' · showing '+layers[0].sats.length.toLocaleString()+' of '+d.active.length.toLocaleString()+' active objects':'');
-    updatePositions();
-  }).catch(err=>{statusEl.textContent='Could not load orbital data: '+err.message;});
-
-  requestAnimationFrame(frame);
-  }
-})();
-
-// Pipeline tabs
-document.querySelectorAll('#pipe .step').forEach(s=>s.addEventListener('click',()=>{
-  document.querySelectorAll('#pipe .step').forEach(o=>o.classList.remove('on'));
-  s.classList.add('on');document.getElementById('pipeDetail').textContent=s.dataset.d;
-}));
 
 // Density chart (illustrative)
 function drawChart(){

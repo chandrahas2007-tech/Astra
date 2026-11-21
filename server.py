@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Satellite Tracker Backend
@@ -9,9 +8,15 @@ Run:
 
 Open:
     http://localhost:8000
+
+Endpoints:
+    /api/stats       satellite counts from the CelesTrak SATCAT
+    /api/satellites  searchable satellite list
+    /api/gp          orbital elements (active + debris) for the 3D globe
 """
 
 import csv
+import gzip
 import io
 import json
 import os
@@ -27,14 +32,45 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 URL = "https://celestrak.org/pub/satcat.csv"
 CACHE_SECONDS = 6 * 3600
 
+# ---- Orbital elements for the 3D globe -------------------------------------
+# CelesTrak asks users not to download the same data more than once per 2 hours.
+GP_URL = "https://celestrak.org/NORAD/elements/gp.php?FORMAT=json&GROUP="
+GP_CACHE_SECONDS = 2 * 3600
+
+# Famous breakup / collision debris clouds
+DEBRIS_GROUPS = [
+    "fengyun-1c-debris",   # 2007 anti-satellite test
+    "cosmos-2251-debris",  # 2009 Iridium-Cosmos collision
+    "iridium-33-debris",   # 2009 Iridium-Cosmos collision
+    "cosmos-1408-debris",  # 2021 anti-satellite test
+]
+
+# Only the fields satellite.js needs, to keep the payload small
+GP_FIELDS = (
+    "OBJECT_NAME", "OBJECT_ID", "NORAD_CAT_ID", "EPOCH",
+    "MEAN_MOTION", "ECCENTRICITY", "INCLINATION", "RA_OF_ASC_NODE",
+    "ARG_OF_PERICENTER", "MEAN_ANOMALY", "EPHEMERIS_TYPE",
+    "CLASSIFICATION_TYPE", "ELEMENT_SET_NO", "REV_AT_EPOCH",
+    "BSTAR", "MEAN_MOTION_DOT", "MEAN_MOTION_DDOT",
+)
+
 ACTIVE_CODES = {"+", "P", "B", "S", "X"}
 
 _lock = threading.Lock()
+_gp_lock = threading.Lock()
 
 _cache = {
     "t": 0,
     "rows": [],
     "source": "none",
+}
+
+_gp = {
+    "t": 0,
+    "active": [],
+    "debris": [],
+    "source": "none",
+    "updated": None,
 }
 
 
@@ -170,6 +206,78 @@ def load():
         return _cache
 
 
+def fetch_group(group):
+    """Download one CelesTrak GP group as trimmed OMM JSON records."""
+
+    req = Request(
+        GP_URL + group,
+        headers={"User-Agent": "Mozilla/5.0 SatelliteTracker/1.0"},
+    )
+
+    with urlopen(req, timeout=60) as response:
+        text = response.read().decode("utf-8", errors="replace")
+
+    data = json.loads(text)
+
+    if not isinstance(data, list):
+        raise ValueError("Unexpected GP response for " + group)
+
+    return [
+        {k: obj[k] for k in GP_FIELDS if k in obj}
+        for obj in data
+    ]
+
+
+def load_gp():
+    """Orbital elements for the globe, cached for 2 hours."""
+
+    with _gp_lock:
+
+        if _gp["active"] and time.time() - _gp["t"] < GP_CACHE_SECONDS:
+            return _gp
+
+        # Do not hammer CelesTrak after a failure: retry in 5 minutes
+        if not _gp["active"] and _gp["t"] and time.time() - _gp["t"] < 300:
+            return _gp
+
+        try:
+            print("Downloading orbital elements...")
+
+            active = fetch_group("active")
+
+            debris = []
+            for group in DEBRIS_GROUPS:
+                try:
+                    debris.extend(fetch_group(group))
+                except Exception as error:
+                    print(f"Skipping {group}:", error)
+
+            _gp.update({
+                "t": time.time(),
+                "active": active,
+                "debris": debris,
+                "source": "celestrak",
+                "updated": time.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+                ),
+            })
+
+            print(f"Loaded {len(active)} active, {len(debris)} debris")
+
+        except Exception as error:
+            print("Orbital element download failed:", error)
+
+            if _gp["active"]:
+                print("Using previous cached orbital data")
+            else:
+                _gp.update({
+                    "t": time.time(),
+                    "source": "unavailable",
+                })
+
+        return _gp
+
+
 def stats():
 
     data = load()
@@ -287,8 +395,18 @@ class Handler(BaseHTTPRequestHandler):
 
         body = json.dumps(data).encode("utf-8")
 
+        gzipped = (
+            len(body) > 50000
+            and "gzip" in self.headers.get("Accept-Encoding", "")
+        )
+
+        if gzipped:
+            body = gzip.compress(body, 5)
+
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
+        if gzipped:
+            self.send_header("Content-Encoding", "gzip")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
@@ -303,6 +421,15 @@ class Handler(BaseHTTPRequestHandler):
 
             if url.path == "/api/stats":
                 return self.send_json(200, stats())
+
+            if url.path == "/api/gp":
+                gp = load_gp()
+                return self.send_json(200, {
+                    "source": gp["source"],
+                    "updated": gp["updated"],
+                    "active": gp["active"],
+                    "debris": gp["debris"],
+                })
 
             if url.path == "/api/satellites":
                 return self.send_json(
@@ -350,6 +477,9 @@ if __name__ == "__main__":
 
     print("Starting Satellite Tracker...")
     load()
+
+    # Warm the orbital-element cache in the background
+    threading.Thread(target=load_gp, daemon=True).start()
 
     print(f"Server running at http://localhost:{PORT}")
 

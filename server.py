@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 """
 Satellite Tracker Backend
@@ -9,6 +8,9 @@ Run:
 
 Open:
     http://localhost:8000
+
+[ASTRA patch] marks the lines changed to connect this server with the
+data-integration pipeline (data/dashboard.json) and the page loader (astra-data.js).
 """
 
 import csv
@@ -26,8 +28,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 URL = "https://celestrak.org/pub/satcat.csv"
 CACHE_SECONDS = 6 * 3600
+RETRY_SECONDS = 15 * 60  # [ASTRA patch] wait this long after a failed download
 
 ACTIVE_CODES = {"+", "P", "B", "S", "X"}
+
+# [ASTRA patch] the only extra files the server may hand out (no open file access)
+STATIC_FILES = {
+    "/astra-data.js": ("astra-data.js", "text/javascript; charset=utf-8"),
+    "/data/dashboard.json": ("data/dashboard.json", "application/json; charset=utf-8"),
+}
 
 _lock = threading.Lock()
 
@@ -35,6 +44,7 @@ _cache = {
     "t": 0,
     "rows": [],
     "source": "none",
+    "retry_at": 0,  # [ASTRA patch]
 }
 
 
@@ -115,8 +125,15 @@ def load():
 
     with _lock:
 
+        now = time.time()
+
         # Use cache if fresh
-        if _cache["rows"] and time.time() - _cache["t"] < CACHE_SECONDS:
+        if _cache["rows"] and now - _cache["t"] < CACHE_SECONDS:
+            return _cache
+
+        # [ASTRA patch] after a failed download, do not retry on every request
+        # (CelesTrak blocks clients that download too often)
+        if now < _cache["retry_at"]:
             return _cache
 
         try:
@@ -148,6 +165,7 @@ def load():
                 "t": time.time(),
                 "rows": rows,
                 "source": "celestrak",
+                "retry_at": 0,
             })
 
             print(f"Loaded {len(rows)} payloads")
@@ -156,13 +174,15 @@ def load():
 
             print("Catalogue download failed:", error)
 
+            _cache["retry_at"] = time.time() + RETRY_SECONDS  # [ASTRA patch]
+
             # Retain previous valid data
             if _cache["rows"]:
                 print("Using previous cached data")
 
             else:
+                # [ASTRA patch] t stays 0 so the API reports "Unavailable"
                 _cache.update({
-                    "t": time.time(),
                     "rows": [],
                     "source": "unavailable",
                 })
@@ -295,6 +315,24 @@ class Handler(BaseHTTPRequestHandler):
 
         self.wfile.write(body)
 
+    def send_static(self, rel_path, content_type):
+        """[ASTRA patch] serve one whitelisted file from next to server.py."""
+
+        try:
+            with open(os.path.join(HERE, rel_path), "rb") as file:
+                body = file.read()
+        except FileNotFoundError:
+            return self.send_json(404, {"error": rel_path + " not found"})
+
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        self.wfile.write(body)
+
     def do_GET(self):
 
         url = urlparse(self.path)
@@ -309,6 +347,10 @@ class Handler(BaseHTTPRequestHandler):
                     200,
                     query(parse_qs(url.query))
                 )
+
+            if url.path in STATIC_FILES:  # [ASTRA patch]
+                rel_path, content_type = STATIC_FILES[url.path]
+                return self.send_static(rel_path, content_type)
 
             if url.path in ("/", "/index.html"):
 

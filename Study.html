@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satellite Tracker – Research and study</title>
+<style>
+:root{--bg:#050a14;--card:#0f1b30;--line:#1e2f4d;--text:#e6edf7;--muted:#8fa3c0;--cyan:#22d3ee;--amber:#fbbf24;--red:#f87171;--green:#4ade80}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55}
+a{color:var(--cyan)}.wrap{max-width:1000px;margin:0 auto;padding:28px 20px 60px}
+h1{font-size:clamp(26px,5vw,38px)}h1 span{color:var(--cyan)}
+h2{font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:36px 0 12px}
+h3{font-size:17px;margin-bottom:6px}.muted,.sub{color:var(--muted)}.sub{margin-top:6px;max-width:70ch}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:22px}.kpis small{color:var(--muted)}.kpis strong{display:block;font-size:28px}
+button{font:inherit;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:99px;padding:8px 16px;cursor:pointer}
+button:hover,button:focus-visible{border-color:var(--cyan);outline:none}button.on{background:var(--cyan);color:#04202a;border-color:var(--cyan);font-weight:600}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+#lesson{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:6px 24px 18px;min-height:70px}
+#lesson h2{margin-top:16px;color:var(--cyan);text-transform:none;font-size:20px;letter-spacing:0}#lesson h3{margin-top:14px;color:var(--cyan)}
+#lesson li{margin-left:20px;color:var(--muted)}#lesson p{color:var(--muted);margin-top:8px}
+code{background:#0a1222;padding:1px 6px;border-radius:5px;font-size:.92em}
+.pill{padding:2px 10px;border-radius:99px;font-size:12px;font-weight:700;display:inline-block;margin-bottom:8px}
+.cross-checked,.pass{background:rgba(74,222,128,.15);color:var(--green)}.single-source{background:rgba(251,191,36,.15);color:var(--amber)}
+.estimate{background:rgba(34,211,238,.15);color:var(--cyan)}.unverified,.fail{background:rgba(248,113,113,.15);color:var(--red)}
+dl{margin-top:10px;font-size:14px}dt{color:var(--muted);margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted)}
+.warn{color:var(--amber);margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p><a href="index.html">← Back to the tracker</a></p>
+  <h1 style="margin-top:14px">Research and <span>study</span></h1>
+  <p class="sub">Each claim shows how it was checked, where it came from and where it stops being reliable. The status badge tells you how far to trust it.</p>
+  <p class="warn" id="warn" hidden></p>
+  <div class="grid kpis" id="kpis"></div>
+
+  <h2>Study modules</h2>
+  <div class="tabs" id="tabs"></div>
+  <article id="lesson"><p>Choose a module.</p></article>
+
+  <h2>Findings and their status</h2>
+  <p class="muted" style="font-size:14px;margin-bottom:12px"><b>Cross-checked</b>: reproduced by a calculation on this data. <b>Single source</b>: reported by one place, not yet re-checked. <b>Estimate</b>: a rough figure. <b>Unverified</b>: no source yet, or a check failed.</p>
+  <div class="grid" id="findings"></div>
+
+  <h2>Data checks</h2>
+  <div class="card" style="padding:6px 14px"><table id="checks"><tr><th>Check</th><th>Result</th><th>Detail</th></tr></table></div>
+  <p style="margin-top:18px"><a href="data/research-report.md" download>Download the research report</a></p>
+</div>
+<script>
+// Set this to your repo's issues page to turn on "Report a problem", e.g. https://github.com/you/Astra/issues/new
+const FEEDBACK_URL = "";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function get(p, text){const r=await fetch(p);if(!r.ok)throw new Error(p+': HTTP '+r.status);return text?r.text():r.json()}
+function md(t){
+  const out=[];let list=false;
+  for(const raw of t.split('\n')){
+    const l=esc(raw).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\*([^*]+)\*/g,'<i>$1</i>');
+    const li=/^- (.*)/.exec(l),h=/^(#{1,2}) (.*)/.exec(l);
+    if(list&&!li){out.push('</ul>');list=false}
+    if(li){if(!list){out.push('<ul>');list=true}out.push('<li>'+li[1]+'</li>')}
+    else if(h){const n=h[1].length+1;out.push(`<h${n}>${h[2]}</h${n}>`)}
+    else if(l.trim())out.push('<p>'+l+'</p>');
+  }
+  if(list)out.push('</ul>');return out.join('');
+}
+const fmt=n=>Number(n).toLocaleString();
+function card(f){
+  const src=(f.sources||[]).filter(s=>/^https:\/\//.test(s.url)).map(s=>`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join(', ')||'None';
+  const fb=FEEDBACK_URL?`<p style="margin-top:12px"><a href="${esc(FEEDBACK_URL)}?title=${encodeURIComponent('Finding: '+f.title)}" target="_blank" rel="noopener">Report a problem or suggestion</a></p>`:'';
+  return `<div class="card"><span class="pill ${esc(f.status)}">${esc(f.status)}</span><h3>${esc(f.title)}</h3><p class="muted">${esc(f.claim)}</p>
+  <dl><dt>How it was checked</dt><dd>${esc(f.method)}</dd>${f.evidence?`<dt>Latest result</dt><dd>${esc(f.evidence)}</dd>`:''}<dt>Limits</dt><dd>${esc(f.limitations)}</dd><dt>Sources</dt><dd>${src}</dd></dl>${fb}</div>`;
+}
+(async()=>{
+  try{
+    const d=await get('data/research.json'),s=d.summary;
+    $('kpis').innerHTML=[['Payloads',s.total],['Active',s.active],['Inactive',s.inactive],['With orbit data',s.orbit_data_coverage_pct+'%']]
+      .map(([k,v])=>`<div class="card"><small>${k}</small><strong>${typeof v==='number'?fmt(v):esc(v)}</strong></div>`).join('')+
+      `<div class="card"><small>Catalogue fetched</small><strong style="font-size:16px;margin-top:8px">${esc(d.catalogue_updated)}</strong></div>`;
+    if(d.source!=='celestrak'){$('warn').hidden=false;$('warn').textContent='These numbers did not come from CelesTrak. Do not cite them.'}
+    $('tabs').innerHTML=d.modules.map(m=>`<button data-m="${esc(m.slug)}">${esc(m.title)}</button>`).join('');
+    $('tabs').onclick=async e=>{
+      const b=e.target.closest('button');if(!b)return;
+      document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
+      try{$('lesson').innerHTML=md(await get('research/modules/'+b.dataset.m+'.md',true))}catch(err){$('lesson').textContent=err.message}
+    };
+    $('findings').innerHTML=d.findings.map(card).join('');
+    d.checks.forEach(c=>$('checks').insertAdjacentHTML('beforeend',`<tr><td>${esc(c.name)}</td><td><span class="pill ${c.pass?'pass':'fail'}">${c.pass?'Pass':'Fail'}</span></td><td class="muted">${esc(c.detail)}</td></tr>`));
+  }catch(err){$('warn').hidden=false;$('warn').textContent='Could not load data/research.json. Run build_data.py, then build_research.py, and serve the folder over http. ('+err.message+')'}
+})();
+</script>
+</body>
+</html>

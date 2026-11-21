@@ -1,0 +1,26 @@
+name: Update ASTRA satellite data
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"     # every 6 hours (CelesTrak asks for >= 2 h between downloads)
+  workflow_dispatch:           # lets you run it manually from the Actions tab
+
+permissions:
+  contents: write              # needed to commit data/dashboard.json
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r pipeline/requirements.txt
+      - run: python pipeline/run_pipeline.py --force
+      - name: Commit updated data
+        run: |
+          git config user.name "astra-bot"
+          git config user.email "astra-bot@users.noreply.github.com"
+          git add data/dashboard.json
+          git diff --cached --quiet || (git commit -m "Update satellite data" && git push)

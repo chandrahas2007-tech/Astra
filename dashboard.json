@@ -1,0 +1,22 @@
+{
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "sample": true,
+  "kpis": {"active_satellites": 7420, "inactive_or_debris": 3180, "stale_tracking": 214, "near_reentry": 37},
+  "density": {
+    "labels": ["300","500","700","800","900","1k","1.2k","1.5k","2k","GEO"],
+    "active": [8,22,40,58,44,30,18,12,8,5],
+    "debris": [4,14,30,52,70,56,34,20,10,6]
+  },
+  "zones": [
+    {"zone": "400-600 km", "objects": 580, "index": 58},
+    {"zone": "700-900 km", "objects": 910, "index": 91},
+    {"zone": "1,000-1,200 km", "objects": 340, "index": 34},
+    {"zone": "GEO belt", "objects": 460, "index": 46}
+  ],
+  "reentry_candidates": [
+    {"name": "SAMPLE-DEB-1", "perigee_km": 240.0, "type": "debris"},
+    {"name": "SAMPLE-SAT-2", "perigee_km": 270.0, "type": "inactive_payload"},
+    {"name": "SAMPLE-RB-3", "perigee_km": 290.0, "type": "rocket_body"}
+  ],
+  "notes": {"source": "SAMPLE placeholder. Replaced by the first run of the update workflow."}
+}

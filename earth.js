@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------
-// Live 3D view: Earth + Moon + satellites (SGP4 from CelesTrak) and Earth + Mars (Kepler orbits).
+// Live 3D view: Earth + Moon + Mars + satellites (SGP4 from CelesTrak) and Earth + Mars (Kepler orbits).
 // Hover any trajectory line to see the equation that describes it.
+// Earth view also shows Mars in its true direction from Earth (distance compressed, size exaggerated).
 // ---------------------------------------------------------------------------
 (function(){
   const box=document.getElementById('globeCanvas');
@@ -22,6 +23,7 @@
     const MOON_BOOST=2000;    // Moon clock runs this much faster than the satellite clock
     const SOLAR_BOOST=3000;   // planet clock runs this much faster than the satellite clock
     const MAX_ACTIVE=2500, MAX_DEBRIS=1500;
+    const MARS_VIEW=110;      // Earth view: Mars distance in scene units (Moon orbit is about 60)
     const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const f=(x,d)=>Number(x).toLocaleString('en-US',{maximumFractionDigits:d||0});
 
@@ -67,7 +69,7 @@
     }
     new ResizeObserver(resize).observe(box);resize();
 
-    // Two scene groups: Earth system (Earth, Moon, satellites) and solar system (Sun, Earth, Mars)
+    // Two scene groups: Earth system (Earth, Moon, Mars direction, satellites) and solar system (Sun, Earth, Mars)
     const gE=new THREE.Group(), gS=new THREE.Group();
     scene.add(gE);scene.add(gS);gS.visible=false;
 
@@ -90,6 +92,13 @@
     // Moon (true size: radius 1,737 km)
     const moon=new THREE.Mesh(new THREE.SphereGeometry(1737*SE,32,32),new THREE.MeshPhongMaterial({color:0xb8b8b8,shininess:3}));
     gE.add(moon);
+
+    // Mars in the Earth view: true geocentric direction, compressed distance, exaggerated size
+    const marsE=new THREE.Mesh(new THREE.SphereGeometry(3,32,32),new THREE.MeshPhongMaterial({color:0xc1440e,shininess:4}));
+    gE.add(marsE);
+    const marsLineGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+    const marsLine=new THREE.Line(marsLineGeo,new THREE.LineBasicMaterial({color:0xfb7185,transparent:true,opacity:.35}));
+    marsLine.frustumCulled=false;gE.add(marsLine);
 
     // Solar system bodies (enlarged so they can be seen)
     const sunMesh=new THREE.Mesh(new THREE.SphereGeometry(.9,32,32),new THREE.MeshBasicMaterial({color:0xffc933}));
@@ -125,6 +134,7 @@
     }
     addLabel(gE,'Earth','#9ec5ff',earth,1.03);
     addLabel(gE,'Moon','#e2e8f0',moon,1737*SE);
+    addLabel(gE,'Mars','#ff8a5c',marsE,3);
     addLabel(gS,'Sun','#ffd866',sunMesh,.9);
     addLabel(gS,'Earth','#9ec5ff',earthS,.28);
     addLabel(gS,'Mars','#ff8a5c',marsM,.2);
@@ -338,6 +348,19 @@
       nowMars={r:rm,v:Math.sqrt(MU_SUN*(2/rm-1/(me.a*AU)))};
       return solarMs;
     }
+    // Mars in the Earth view: direction from Earth to Mars (equatorial frame), placed at MARS_VIEW units
+    function updateMarsE(){
+      const solarMs=T0+(simMs-T0)*SOLAR_BOOST;
+      const Tc=((solarMs/86400000+2440587.5)-2451545.0)/36525;
+      const ee=planetEl(EARTH,Tc),me=planetEl(MARS,Tc);
+      const pe=posE(ee,kepler(ee.M,ee.e)),pm=posE(me,kepler(me.M,me.e));
+      const q=eclToEq([pm[0]-pe[0],pm[1]-pe[1],pm[2]-pe[2]]);
+      const m=Math.hypot(q[0],q[1],q[2])||1;
+      marsE.position.set(q[0]/m*MARS_VIEW,q[2]/m*MARS_VIEW,-q[1]/m*MARS_VIEW);
+      const a=marsLineGeo.attributes.position.array;
+      a[3]=marsE.position.x;a[4]=marsE.position.y;a[5]=marsE.position.z;
+      marsLineGeo.attributes.position.needsUpdate=true;
+    }
     function updatePositions(){
       const t0=performance.now(),d=new Date(simMs);
       for(const L of layers){
@@ -450,7 +473,7 @@
     // ----- mode and buttons -----
     function updateStatus(){
       statusEl.textContent=mode==='earth'
-        ?dataNote+' · Moon clock ×'+f(MOON_BOOST)+' faster than satellites so it visibly moves'
+        ?dataNote+' · Moon clock ×'+f(MOON_BOOST)+' faster · Mars shown in its true direction, distance compressed'
         :'Earth and Mars on real Keplerian orbits · planet sizes exaggerated · time runs ×'+f(SOLAR_BOOST)+' faster';
     }
     function setMode(m){
@@ -491,6 +514,7 @@
       let shown;
       if(mode==='earth'){
         updateMoon();
+        updateMarsE();
         earth.rotation.y=satellite.gstime(new Date(simMs));
         acc+=dt;
         if(acc>Math.max(100,cost*3)){acc=0;if(layers.length)updatePositions();}

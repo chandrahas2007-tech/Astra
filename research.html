@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASTRA | Research Analyzer</title>
+    <link rel="stylesheet" href="research.css">
+</head>
+<body>
+
+<div class="research-container">
+
+    <header>
+        <h1>ASTRA Research Intelligence</h1>
+        <p>AI-powered scientific document analysis</p>
+    </header>
+
+    <section class="upload-box">
+        <div class="upload-icon">📚</div>
+        <h2>Upload Research Paper</h2>
+        <p>Upload PDF, DOCX or TXT documents (max 15 MB)</p>
+
+        <input type="file" id="document"
+               accept=".pdf,.docx,.txt">
+
+        <button onclick="uploadDocument()">
+            Upload Document
+        </button>
+
+        <p id="uploadStatus"></p>
+    </section>
+
+    <section class="analysis-box">
+        <h2>Generate Research Notes</h2>
+
+        <select id="noteMode">
+            <option value="both">Simple + Detailed Notes</option>
+            <option value="simple">Simple Notes</option>
+            <option value="detailed">Detailed Research Notes</option>
+        </select>
+
+        <button onclick="generateNotes()">
+            Generate AI Notes
+        </button>
+    </section>
+
+    <section class="notes-box">
+        <h2>Generated Notes</h2>
+        <div id="notes">Your research notes will appear here.</div>
+
+        <button onclick="downloadNotes()">
+            Download Notes
+        </button>
+    </section>
+
+    <section class="question-box">
+        <h2>Ask About Your Document</h2>
+
+        <input id="question"
+               type="text"
+               placeholder="Ask a research question...">
+
+        <button onclick="askQuestion()">Ask AI</button>
+
+        <div id="answer"></div>
+    </section>
+
+</div>
+
+<script src="research.js"></script>
+</body>
+</html>

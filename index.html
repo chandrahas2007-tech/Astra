@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astra – Orbital Debris Dashboard</title>
+<style>
+:root{
+  --bg:#050a14; --bg2:#0b1424; --card:#0f1b30; --line:#1e2f4d;
+  --text:#e6edf7; --muted:#8fa3c0; --cyan:#22d3ee; --amber:#fbbf24; --red:#f87171; --green:#4ade80;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.6}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+nav{position:sticky;top:0;z-index:20;background:rgba(5,10,20,.85);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:56px}
+.logo{font-weight:800;letter-spacing:.25em;color:var(--cyan)}
+nav ul{display:flex;gap:20px;list-style:none;font-size:14px;color:var(--muted)}
+nav ul a:hover{color:var(--text)}
+@media(max-width:760px){nav ul{display:none}}
+section{padding:88px 0;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px}
+h1{font-size:clamp(56px,12vw,120px);letter-spacing:.12em;line-height:1}
+h2{font-size:clamp(26px,4vw,40px);line-height:1.2;margin-bottom:28px;max-width:20ch}
+h3{font-size:18px;margin-bottom:8px}
+p.lead{color:var(--muted);font-size:18px;max-width:60ch}
+.muted{color:var(--muted)}
+/* hero */
+#hero{position:relative;min-height:calc(100vh - 56px);display:flex;align-items:center;overflow:hidden}
+#orbits{position:absolute;inset:0;width:100%;height:100%}
+#hero .wrap{position:relative;z-index:2}
+.tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:28px}
+.tag{border:1px solid var(--line);background:rgba(15,27,48,.7);padding:6px 14px;border-radius:99px;font-size:13px;color:var(--muted)}
+.legend{display:flex;gap:18px;margin-top:22px;font-size:13px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.dot.c{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}.dot.a{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+/* grid & cards */
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;transition:.25s}
+.card:hover{border-color:var(--cyan);transform:translateY(-3px)}
+.card ul{list-style:none;margin-top:10px}
+.card li{color:var(--muted);padding:5px 0 5px 18px;position:relative;font-size:15px}
+.card li::before{content:"";position:absolute;left:0;top:14px;width:6px;height:6px;border-radius:50%;background:var(--cyan)}
+.num{font-size:13px;font-weight:700;color:var(--cyan);letter-spacing:.15em;margin-bottom:8px}
+.problem{border-left:3px solid var(--cyan);padding:6px 0 6px 24px;font-size:clamp(17px,2.2vw,22px);max-width:62ch}
+.problem b{color:var(--cyan);font-weight:600}
+.miss{border-color:rgba(251,191,36,.4)}
+.miss .num{color:var(--amber)}
+.note{margin-top:20px;font-size:14px;color:var(--muted)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;counter-reset:s}
+.step{position:relative;padding:22px 18px;background:var(--card);border:1px solid var(--line);cursor:pointer;transition:.25s}
+.step:first-child{border-radius:14px 0 0 14px}.step:last-child{border-radius:0 14px 14px 0}
+.step.on,.step:hover{background:#13264a;border-color:var(--cyan)}
+.step .num{margin-bottom:4px}.step h3{font-size:16px;margin:0}
+.step-detail{margin-top:18px;min-height:64px;padding:18px 22px;background:var(--bg2);border:1px dashed var(--line);border-radius:12px;color:var(--muted)}
+@media(max-width:700px){.step:first-child,.step:last-child{border-radius:0}}
+/* dashboard */
+.dash{background:var(--bg2);border:1px solid var(--line);border-radius:18px;padding:22px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi small{color:var(--muted);font-size:12px;display:block}
+.kpi strong{font-size:28px}
+.kpi.c strong{color:var(--cyan)}.kpi.a strong{color:var(--amber)}.kpi.r strong{color:var(--red)}
+.panels{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}
+@media(max-width:800px){.panels{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.panel h4{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:.05em;text-transform:uppercase}
+canvas.chart{width:100%;height:230px;display:block}
+.bar{display:flex;align-items:center;gap:10px;margin:10px 0;font-size:13px}
+.bar span:first-child{width:92px;color:var(--muted)}
+.bar .track{flex:1;height:10px;background:#0a1222;border-radius:99px;overflow:hidden}
+.bar .fill{height:100%;border-radius:99px;width:0;transition:width 1.2s ease}
+.bar b{width:34px;text-align:right}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600}
+.pill{padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.hi{background:rgba(248,113,113,.15);color:var(--red)}.md{background:rgba(251,191,36,.15);color:var(--amber)}.lo{background:rgba(74,222,128,.15);color:var(--green)}
+.demo{font-size:12px;color:var(--muted);margin-top:12px;text-align:center}
+/* big stat */
+.stat{font-size:clamp(64px,12vw,110px);font-weight:800;color:var(--cyan);line-height:1}
+.todo{display:inline-block;margin-top:14px;font-size:13px;color:var(--amber);border:1px dashed var(--amber);padding:4px 12px;border-radius:8px}
+.flow .step{cursor:default}
+footer{padding:90px 0;text-align:center}
+footer h2{margin:0 auto 16px;max-width:none}
+.verbs{font-size:clamp(22px,4vw,36px);letter-spacing:.08em}
+.reveal{opacity:0;transform:translateY(24px);transition:.8s}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a href="#hero" class="logo">ASTRA</a>
+  <ul>
+    <li><a href="#problem">Problem</a></li><li><a href="#fit">Where it fits</a></li><li><a href="#features">Features</a></li>
+    <li><a href="#dashboard">Dashboard</a></li><li><a href="#how">How it works</a></li><li><a href="#learn">Learning</a></li>
+  </ul>
+</div></nav>
+
+<header id="hero">
+  <canvas id="orbits"></canvas>
+  <div class="wrap">
+    <div class="eyebrow">Hackathon project</div>
+    <h1>ASTRA</h1>
+    <p class="lead" style="margin-top:18px">Orbital debris intelligence for research and classrooms</p>
+    <div class="tags"><span class="tag">Moon, Mars &amp; Deep-Space Exploration</span><span class="tag">Sustainable Space &amp; Space Environment</span></div>
+    <div class="legend"><span><i class="dot c"></i>Working satellites</span><span><i class="dot a"></i>Debris</span></div>
+  </div>
+</header>
+
+<section id="problem"><div class="wrap reveal">
+  <div class="eyebrow">The problem statement</div>
+  <h2>Making orbital congestion visible</h2>
+  <p class="problem">Develop a user-friendly <b>web dashboard</b> that collects data on real incidents and objects from <b>publicly available satellite catalogues</b>, analyses <b>how long objects persist in orbit</b>, and visualises <b>orbital congestion</b>. It <b>ranks objects and orbit zones by risk</b>, based on their orbits and trajectories, to support space research and development as well as teaching.</p>
+  <p class="note">Active satellites can share their position and manoeuvre. Dead ones cannot, so the risk grows quietly.</p>
+</div></section>
+
+<section id="fit"><div class="wrap reveal">
+  <div class="eyebrow">Where Astra fits</div>
+  <h2>Existing tracking systems show orbits</h2>
+  <div class="grid g2">
+    <div class="card">
+      <div class="num">WHAT EXISTS</div>
+      <div class="tags" style="margin:6px 0 14px"><span class="tag">CelesTrak</span><span class="tag">LeoLabs LeoTrack</span><span class="tag">NASA CARA</span><span class="tag">NASA Starling</span></div>
+      <p class="muted">They provide 3D views of orbits and satellites.</p>
+    </div>
+    <div class="card miss">
+      <div class="num">WHAT IS MISSING</div>
+      <ul>
+        <li><b>Research and developmental use of space incidents</b><br>Not built for R&amp;D workflows.</li>
+        <li><b>Learning from real incidents</b><br>Not built for teaching and outreach.</li>
+        <li><b>Risk by object, orbit and trajectory</b><br>Astra adds this view on top of public catalogue data.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">Astra does not replace these systems. It uses the information they publish and adds an analysis and teaching layer.</p>
+</div></section>
+
+<section id="features"><div class="wrap reveal">
+  <div class="eyebrow">What Astra does</div>
+  <h2>One web dashboard: track, predict, act</h2>
+  <div class="grid g3">
+    <div class="card"><div class="num">01</div><h3>Track</h3><ul><li>Active and inactive satellite counts</li><li>Last reported orbital data</li><li>Data freshness and objects needing a tracking update</li></ul></div>
+    <div class="card"><div class="num">02</div><h3>Predict</h3><ul><li>Future orbital movement</li><li>Prediction uncertainty</li><li>Expected collision events</li></ul></div>
+    <div class="card"><div class="num">03</div><h3>Act</h3><ul><li>Risk orbit zones for future launches</li><li>Dead satellites near re-entry</li><li>Re-entry timing and area alerts</li></ul></div>
+  </div>
+  <p class="note">Also included: a record of real incidents and their studies, for research and teaching. Every number carries its uncertainty and data age.</p>
+</div></section>
+
+<section id="dashboard"><div class="wrap reveal">
+  <div class="eyebrow">Dashboard preview</div>
+  <h2>Risk at a glance</h2>
+  <div class="dash">
+    <div class="kpis">
+      <div class="kpi c"><small>Active satellites</small><strong data-to="7420">0</strong></div>
+      <div class="kpi a"><small>Inactive / debris</small><strong data-to="3180">0</strong></div>
+      <div class="kpi"><small>Stale tracking data</small><strong data-to="214">0</strong></div>
+      <div class="kpi r"><small>Near re-entry</small><strong data-to="37">0</strong></div>
+    </div>
+    <div class="panels">
+      <div class="panel"><h4>Object density by altitude (km)</h4><canvas id="chart" class="chart"></canvas></div>
+      <div class="panel"><h4>Risk orbit zones</h4>
+        <div class="bar"><span>400–600 km</span><div class="track"><div class="fill" data-w="58" style="background:var(--amber)"></div></div><b>58</b></div>
+        <div class="bar"><span>700–900 km</span><div class="track"><div class="fill" data-w="91" style="background:var(--red)"></div></div><b>91</b></div>
+        <div class="bar"><span>1,000–1,200</span><div class="track"><div class="fill" data-w="34" style="background:var(--green)"></div></div><b>34</b></div>
+        <div class="bar"><span>GEO belt</span><div class="track"><div class="fill" data-w="46" style="background:var(--amber)"></div></div><b>46</b></div>
+        <table>
+          <tr><th>Object</th><th>Re-entry (±)</th><th>Risk</th></tr>
+          <tr><td>DEB-0412</td><td>in 9 d (±2 d)</td><td><span class="pill hi">High</span></td></tr>
+          <tr><td>SAT-1187</td><td>in 21 d (±5 d)</td><td><span class="pill md">Med</span></td></tr>
+          <tr><td>R/B-0093</td><td>in 63 d (±12 d)</td><td><span class="pill lo">Low</span></td></tr>
+        </table>
+      </div>
+    </div>
+    <p class="demo">Illustrative sample data for the concept. Real values come from public satellite catalogues.</p>
+  </div>
+</div></section>
+
+<section id="how"><div class="wrap reveal">
+  <div class="eyebrow">How it works</div>
+  <h2>From public catalogues to risk dashboard</h2>
+  <div class="pipe" id="pipe">
+    <div class="step on" data-d="Public satellite catalogues and real incident records."><div class="num">01</div><h3>Collect</h3></div>
+    <div class="step" data-d="Normalise records and flag stale tracking data."><div class="num">02</div><h3>Clean</h3></div>
+    <div class="step" data-d="Send data to professional tools or AI to propagate orbits and uncertainty."><div class="num">03</div><h3>Propagate</h3></div>
+    <div class="step" data-d="Score objects and zones using concepts drawn from real space incidents."><div class="num">04</div><h3>Score</h3></div>
+    <div class="step" data-d="Build learning modules and 3D presentations for students."><div class="num">05</div><h3>Display</h3></div>
+  </div>
+  <div class="step-detail" id="pipeDetail">Public satellite catalogues and real incident records.</div>
+</div></section>
+
+<section id="why"><div class="wrap reveal">
+  <div class="eyebrow">Why this project</div>
+  <h2>Students experience real incidents</h2>
+  <div class="grid g3">
+    <div class="card"><h3>Motivation to study</h3><p class="muted">Real events give theory a reason to matter.</p></div>
+    <div class="card"><h3>Easy visualisation</h3><p class="muted">Concepts become simple to see and understand.</p></div>
+    <div class="card"><h3>Awareness</h3><p class="muted">About space debris and satellite accidents.</p></div>
+  </div>
+  <div style="margin-top:56px;display:grid;gap:28px;grid-template-columns:auto 1fr;align-items:center">
+    <div class="stat">~95%</div>
+    <div><h3>of schools still teach mainly on boards</h3>
+      <p class="muted">Even where digital access exists, real incidents are rarely used to practise problems. Students learn the theory but struggle to apply it.</p>
+      <span class="todo">Add the source for the 95% figure before presenting</span></div>
+  </div>
+</div></section>
+
+<section id="learn"><div class="wrap reveal">
+  <div class="eyebrow">Learning with real incidents</div>
+  <h2>Real space events make physics visible</h2>
+  <div class="grid g4">
+    <div class="card"><h3>Satellite accidents</h3><p class="muted">The physics behind collisions, breakups and debris.</p></div>
+    <div class="card"><h3>Solar eclipses</h3><p class="muted">Alignment, shadows and timing.</p></div>
+    <div class="card"><h3>Projectiles &amp; trajectories</h3><p class="muted">Complex topics become easier to picture and more motivating.</p></div>
+    <div class="card"><h3>Planetariums &amp; science parks</h3><p class="muted">The same data powers a 3D visual experience for visitors.</p></div>
+  </div>
+  <h3 style="margin:56px 0 18px;font-size:22px">From event to lesson</h3>
+  <div class="pipe flow">
+    <div class="step"><div class="num">01</div><h3>Record</h3><p class="muted" style="font-size:13px">Space incidents and recordings</p></div>
+    <div class="step"><div class="num">02</div><h3>Convert</h3><p class="muted" style="font-size:13px">Recordings turned into usable data</p></div>
+    <div class="step"><div class="num">03</div><h3>Review</h3><p class="muted" style="font-size:13px">Professionals and AI infer the physics</p></div>
+    <div class="step"><div class="num">04</div><h3>Teach</h3><p class="muted" style="font-size:13px">Lessons, dashboards and 3D visuals</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap reveal">
+  <div class="logo" style="font-size:20px;margin-bottom:12px">ASTRA</div>
+  <h2 class="verbs">Track. Predict. Teach.</h2>
+  <p class="lead" style="margin:0 auto">Making space debris visible for researchers, space organisations and students.</p>
+  <p style="margin-top:28px;color:var(--cyan);font-weight:600">Thank you</p>
+</div></footer>
+
+<script>
+// Hero orbit animation: cyan = satellites, amber = debris
+(function(){
+  const c=document.getElementById('orbits'),x=c.getContext('2d');
+  let W,H,dpr,bodies=[];
+  function size(){dpr=Math.min(devicePixelRatio||1,2);W=c.clientWidth;H=c.clientHeight;c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0)}
+  function init(){
+    bodies=[];
+    for(let i=0;i<5;i++){
+      const r=0.18+i*0.09, n=6+i*5;
+      for(let j=0;j<n;j++){
+        const deb=Math.random()<0.45;
+        bodies.push({r,a:Math.random()*6.28,s:(0.0016/(r*3))*(Math.random()<.2?-1:1)*(deb?.8:1),deb,t:.85+Math.random()*.15,sz:deb?1.6:2.4});
+      }
+    }
+  }
+  function draw(){
+    x.clearRect(0,0,W,H);
+    const cx=W*0.72,cy=H*0.5,u=Math.min(W,H)*0.95;
+    const g=x.createRadialGradient(cx,cy,0,cx,cy,u*.1);g.addColorStop(0,'#2a6df4');g.addColorStop(1,'#0b2a66');
+    x.fillStyle=g;x.beginPath();x.arc(cx,cy,u*.1,0,6.28);x.fill();
+    x.strokeStyle='rgba(120,160,220,.12)';x.lineWidth=1;
+    for(let i=0;i<5;i++){x.beginPath();x.ellipse(cx,cy,u*(0.18+i*.09),u*(0.18+i*.09)*.55,-0.35,0,6.28);x.stroke()}
+    for(const b of bodies){
+      b.a+=b.s*16;
+      const px=Math.cos(b.a)*u*b.r,py=Math.sin(b.a)*u*b.r*.55;
+      const ca=Math.cos(-.35),sa=Math.sin(-.35);
+      const X=cx+px*ca-py*sa,Y=cy+px*sa+py*ca;
+      x.fillStyle=b.deb?'#fbbf24':'#22d3ee';x.shadowColor=x.fillStyle;x.shadowBlur=6;
+      x.beginPath();x.arc(X,Y,b.sz,0,6.28);x.fill();
+    }
+    x.shadowBlur=0;
+    if(!matchMedia('(prefers-reduced-motion:reduce)').matches) requestAnimationFrame(draw);
+  }
+  addEventListener('resize',()=>{size()});
+  size();init();draw();
+})();
+
+// Pipeline tabs
+document.querySelectorAll('#pipe .step').forEach(s=>s.addEventListener('click',()=>{
+  document.querySelectorAll('#pipe .step').forEach(o=>o.classList.remove('on'));
+  s.classList.add('on');document.getElementById('pipeDetail').textContent=s.dataset.d;
+}));
+
+// Density chart (illustrative)
+function drawChart(){
+  const c=document.getElementById('chart'),x=c.getContext('2d'),dpr=Math.min(devicePixelRatio||1,2);
+  const W=c.clientWidth,H=c.clientHeight;c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);
+  const act=[8,22,40,58,44,30,18,12,8,5],deb=[4,14,30,52,70,56,34,20,10,6];
+  const labels=['300','500','700','800','900','1k','1.2k','1.5k','2k','GEO'];
+  const pad=26,bw=(W-pad*2)/act.length,max=80;
+  x.font='11px system-ui';x.textAlign='center';
+  act.forEach((v,i)=>{
+    const bx=pad+i*bw;
+    [[v,'#22d3ee',0],[deb[i],'#fbbf24',1]].forEach(([val,col,k])=>{
+      const h=(val/max)*(H-pad-10);x.fillStyle=col;
+      x.fillRect(bx+bw*.1+k*bw*.4,H-pad-h,bw*.36,h);
+    });
+    x.fillStyle='#8fa3c0';x.fillText(labels[i],bx+bw/2,H-8);
+  });
+  x.strokeStyle='#1e2f4d';x.beginPath();x.moveTo(pad,H-pad);x.lineTo(W-pad,H-pad);x.stroke();
+}
+drawChart();addEventListener('resize',drawChart);
+
+// Reveal + counters + bars
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting)return;e.target.classList.add('in');
+  e.target.querySelectorAll('[data-to]').forEach(el=>{
+    const to=+el.dataset.to,t0=performance.now();
+    (function f(t){const p=Math.min((t-t0)/1200,1);el.textContent=Math.round(to*(1-Math.pow(1-p,3))).toLocaleString();if(p<1)requestAnimationFrame(f)})(t0);
+  });
+  e.target.querySelectorAll('.fill').forEach(el=>el.style.width=el.dataset.w+'%');
+  io.unobserve(e.target);
+}),{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+
+<script src="astra-data.js"></script>
+</body>
+</html>

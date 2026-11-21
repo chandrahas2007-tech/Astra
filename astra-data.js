@@ -1,12 +1,14 @@
 // astra-data.js: fills the ASTRA dashboard from data/dashboard.json.
-// Add ONE line to index.html, AFTER the existing inline <script> and before </body>:
+// In index.html, AFTER the last inline <script> and before </body>:
 //     <script src="astra-data.js"></script>
-// If the data file cannot be loaded, the page keeps its built-in sample values
-// and says so in the note under the dashboard.
+// Everything is scoped to the #dashboard section, so other parts of the page
+// (for example the live globe cards) are never touched.
 (function () {
+  console.info('ASTRA: astra-data.js loaded');
   const DATA_URL = 'data/dashboard.json';
-  const $ = (s, r) => (r || document).querySelector(s);
-  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const root = document.getElementById('dashboard') || document;
+  const $ = (s, r) => (r || root).querySelector(s);
+  const $$ = (s, r) => Array.from((r || root).querySelectorAll(s));
   const esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const setNote = msg => { const n = $('.demo'); if (n) n.textContent = msg; };
@@ -50,49 +52,54 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       d = await res.json();
     } catch (err) {
-      console.warn('ASTRA: could not load ' + DATA_URL + ' (' + err + '). Showing sample values. ' +
-        'If you opened index.html by double-clicking it, serve it instead: python -m http.server');
-      setNote('Showing built-in sample values: the live data file could not be loaded.');
+      console.warn('ASTRA: could not load ' + DATA_URL + ' (' + err + ')');
+      setNote('Showing built-in sample values: could not load ' + DATA_URL + ' (' + err.message + ').');
       return;
     }
 
-    // 1) KPI counters (the page animates them from data-to when scrolled into view)
-    const k = d.kpis;
-    const vals = [k.active_satellites, k.inactive_or_debris, k.stale_tracking, k.near_reentry];
-    $$('.kpi strong').forEach((el, i) => {
-      el.dataset.to = vals[i];
-      if (el.closest('.reveal.in')) el.textContent = Number(vals[i]).toLocaleString();
-    });
+    try {
+      // 1) KPI counters (the page animates them from data-to when scrolled into view)
+      const k = d.kpis;
+      const vals = [k.active_satellites, k.inactive_or_debris, k.stale_tracking, k.near_reentry];
+      $$('.kpi strong[data-to]').forEach((el, i) => {
+        if (vals[i] === undefined) return;
+        el.dataset.to = vals[i];
+        if (el.closest('.reveal.in')) el.textContent = Number(vals[i]).toLocaleString();
+      });
 
-    // 2) Risk-zone bars (same order as the four bars in the page)
-    $$('.bar').forEach((bar, i) => {
-      const z = d.zones[i];
-      if (!z) return;
-      bar.children[0].textContent = z.zone;
-      const fill = $('.fill', bar);
-      fill.dataset.w = z.index;
-      if (bar.closest('.reveal.in')) fill.style.width = z.index + '%';
-      $('b', bar).textContent = z.index;
-    });
+      // 2) Risk-zone bars (same order as the four bars in the page)
+      $$('.bar').forEach((bar, i) => {
+        const z = d.zones[i];
+        if (!z) return;
+        bar.children[0].textContent = z.zone;
+        const fill = $('.fill', bar);
+        fill.dataset.w = z.index;
+        if (bar.closest('.reveal.in')) fill.style.width = z.index + '%';
+        $('b', bar).textContent = z.index;
+      });
 
-    // 3) Re-entry candidates (heuristic list, lowest perigee first)
-    const table = $('.panel table');
-    if (table) {
-      const rows = (d.reentry_candidates || []).slice(0, 5).map(r =>
-        '<tr><td>' + esc(r.name) + '</td><td>' + r.perigee_km + ' km</td><td>' +
-        esc(String(r.type).replace('_', ' ')) + '</td></tr>').join('');
-      table.innerHTML = '<tr><th>Object</th><th>Perigee</th><th>Type</th></tr>' +
-        (rows || '<tr><td colspan="3">None below threshold</td></tr>');
+      // 3) Re-entry candidates (heuristic list, lowest perigee first)
+      const table = $('.panel table');
+      if (table) {
+        const rows = (d.reentry_candidates || []).slice(0, 5).map(r =>
+          '<tr><td>' + esc(r.name) + '</td><td>' + r.perigee_km + ' km</td><td>' +
+          esc(String(r.type).replace('_', ' ')) + '</td></tr>').join('');
+        table.innerHTML = '<tr><th>Object</th><th>Perigee</th><th>Type</th></tr>' +
+          (rows || '<tr><td colspan="3">None below threshold</td></tr>');
+      }
+
+      // 4) Density chart
+      if (d.density) installChart(d.density);
+
+      // 5) Honest note about where the numbers come from
+      setNote(d.sample
+        ? 'SAMPLE data for layout testing. The scheduled update has not run yet.'
+        : 'CelesTrak public catalogue, updated ' + new Date(d.generated_at).toUTCString() +
+          '. Zone score is relative to the busiest zone (=100), not a collision probability.');
+    } catch (err) {
+      console.error('ASTRA: dashboard.json loaded but has an unexpected format', err);
+      setNote('Loaded data/dashboard.json but could not read it (' + err.message + ').');
     }
-
-    // 4) Density chart
-    if (d.density) installChart(d.density);
-
-    // 5) Honest note about where the numbers come from
-    setNote(d.sample
-      ? 'SAMPLE data for layout testing. The scheduled update has not run yet.'
-      : 'CelesTrak public catalogue, updated ' + new Date(d.generated_at).toUTCString() +
-        '. Zone score is relative to the busiest zone (=100), not a collision probability.');
   }
 
   load();

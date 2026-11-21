@@ -121,7 +121,7 @@ footer h2{margin:0 auto 16px;max-width:none}
   <a href="#hero" class="logo">ASTRA</a>
   <ul>
     <li><a href="#problem">Problem</a></li><li><a href="#features">Features</a></li>
-    <li><a href="#globe">Live orbit</a></li><li><a href="#dashboard">Dashboard</a></li><li><a href="#how">How it works</a></li><li><a href="#learn">Learning</a></li>
+    <li><a href="#globe">Live orbit</a></li><li><a href="#dashboard">Dashboard</a></li><li><a href="#learn">Learning</a></li>
   </ul>
 </div></nav>
 
@@ -210,19 +210,6 @@ footer h2{margin:0 auto 16px;max-width:none}
   </div>
 </div></section>
 
-<section id="how"><div class="wrap reveal">
-  <div class="eyebrow">How it works</div>
-  <h2>From public catalogues to risk dashboard</h2>
-  <div class="pipe" id="pipe">
-    <div class="step on" data-d="Public satellite catalogues and real incident records."><div class="num">01</div><h3>Collect</h3></div>
-    <div class="step" data-d="Normalise records and flag stale tracking data."><div class="num">02</div><h3>Clean</h3></div>
-    <div class="step" data-d="Send data to professional tools or AI to propagate orbits and uncertainty."><div class="num">03</div><h3>Propagate</h3></div>
-    <div class="step" data-d="Score objects and zones using concepts drawn from real space incidents."><div class="num">04</div><h3>Score</h3></div>
-    <div class="step" data-d="Build learning modules and 3D presentations for students."><div class="num">05</div><h3>Display</h3></div>
-  </div>
-  <div class="step-detail" id="pipeDetail">Public satellite catalogues and real incident records.</div>
-</div></section>
-
 <section id="why"><div class="wrap reveal">
   <div class="eyebrow">Why this project</div>
   <h2>Students experience real incidents</h2>
@@ -247,13 +234,6 @@ footer h2{margin:0 auto 16px;max-width:none}
     <div class="card"><h3>Solar eclipses</h3><p class="muted">Alignment, shadows and timing.</p></div>
     <div class="card"><h3>Projectiles &amp; trajectories</h3><p class="muted">Complex topics become easier to picture and more motivating.</p></div>
     <div class="card"><h3>Planetariums &amp; science parks</h3><p class="muted">The same data powers a 3D visual experience for visitors.</p></div>
-  </div>
-  <h3 style="margin:56px 0 18px;font-size:22px">From event to lesson</h3>
-  <div class="pipe flow">
-    <div class="step"><div class="num">01</div><h3>Record</h3><p class="muted" style="font-size:13px">Space incidents and recordings</p></div>
-    <div class="step"><div class="num">02</div><h3>Convert</h3><p class="muted" style="font-size:13px">Recordings turned into usable data</p></div>
-    <div class="step"><div class="num">03</div><h3>Review</h3><p class="muted" style="font-size:13px">Professionals and AI infer the physics</p></div>
-    <div class="step"><div class="num">04</div><h3>Teach</h3><p class="muted" style="font-size:13px">Lessons, dashboards and 3D visuals</p></div>
   </div>
 </div></section>
 
@@ -330,12 +310,6 @@ window.libsReady=(async function(){
   addEventListener('resize',()=>{size()});
   size();init();draw();
 })();
-
-// Pipeline tabs
-document.querySelectorAll('#pipe .step').forEach(s=>s.addEventListener('click',()=>{
-  document.querySelectorAll('#pipe .step').forEach(o=>o.classList.remove('on'));
-  s.classList.add('on');document.getElementById('pipeDetail').textContent=s.dataset.d;
-}));
 
 // Density chart (illustrative)
 function drawChart(){

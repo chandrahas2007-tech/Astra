@@ -52,6 +52,13 @@ p.lead{color:var(--muted);font-size:18px;max-width:60ch}
 .miss{border-color:rgba(251,191,36,.4)}
 .miss .num{color:var(--amber)}
 .note{margin-top:20px;font-size:14px;color:var(--muted)}
+
+/* hero topic buttons */
+.topic-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:24px}
+.topic-btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:11px 20px;border:1px solid var(--cyan);border-radius:10px;background:rgba(34,211,238,.10);color:var(--text);font:600 14px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;cursor:pointer;transition:background .2s,border-color .2s,transform .2s}
+.topic-btn:hover{background:rgba(34,211,238,.20);border-color:#67e8f9;transform:translateY(-2px)}
+.topic-btn:focus-visible{outline:2px solid var(--amber);outline-offset:3px}
+
 /* pipeline */
 .pipe{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;counter-reset:s}
 .step{position:relative;padding:22px 18px;background:var(--card);border:1px solid var(--line);cursor:pointer;transition:.25s}
@@ -121,7 +128,7 @@ footer h2{margin:0 auto 16px;max-width:none}
   <a href="#hero" class="logo">ASTRA</a>
   <ul>
     <li><a href="#problem">Problem</a></li><li><a href="#features">Features</a></li>
-    <li><a href="#globe">Live orbit</a></li><li><a href="#dashboard">Dashboard</a></li><li><a href="#learn">Learning</a></li>
+
   </ul>
 </div></nav>
 
@@ -138,6 +145,7 @@ footer h2{margin:0 auto 16px;max-width:none}
 
 <section id="problem"><div class="wrap reveal">
   <p class="problem">Online platform to experience space incidents virtually</p>
+
 </div></section>
 
 <section id="features"><div class="wrap reveal">
@@ -310,6 +318,7 @@ window.libsReady=(async function(){
   addEventListener('resize',()=>{size()});
   size();init();draw();
 })();
+
 
 // Density chart (illustrative)
 function drawChart(){

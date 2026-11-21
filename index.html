@@ -281,9 +281,33 @@ footer h2{margin:0 auto 16px;max-width:none}
 </div></footer>
 
 <!-- 3D globe libraries: Three.js (rendering) and satellite.js (SGP4 orbit propagation) -->
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<script>
+// Loads each library from the first CDN that works (some networks block one of them)
+window.libsReady=(async function(){
+  function load(urls){
+    return new Promise(function(res,rej){
+      let i=0;
+      (function next(){
+        if(i>=urls.length)return rej(new Error('all sources failed'));
+        const s=document.createElement('script');
+        s.src=urls[i++];s.onload=res;s.onerror=function(){s.remove();next();};
+        document.head.appendChild(s);
+      })();
+    });
+  }
+  const missing=[];
+  try{await load([
+    'https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js',
+    'https://unpkg.com/three@0.147.0/build/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'
+  ]);}catch(e){missing.push('Three.js');}
+  try{await load([
+    'https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js',
+    'https://unpkg.com/satellite.js@5.0.0/dist/satellite.min.js'
+  ]);}catch(e){missing.push('satellite.js');}
+  if(missing.length)throw new Error(missing.join(' and '));
+})();
+</script>
 
 <script>
 // Hero orbit animation: cyan = satellites, amber = debris
@@ -332,14 +356,12 @@ footer h2{margin:0 auto 16px;max-width:none}
   const info=document.getElementById('globeInfo');
   const INFO_DEFAULT=info.textContent;
 
-  const missing=[];
-  if(!window.THREE)missing.push('Three.js');
-  else if(!THREE.OrbitControls)missing.push('OrbitControls');
-  if(!window.satellite)missing.push('satellite.js');
-  if(missing.length){
-    statusEl.textContent='Could not load: '+missing.join(', ')+'. Check your internet connection and reload.';
-    return;
-  }
+  statusEl.textContent='Loading 3D libraries…';
+  window.libsReady.then(initGlobe).catch(function(e){
+    statusEl.textContent='Could not load '+e.message+'. Check your internet connection or ad blocker and reload.';
+  });
+
+  function initGlobe(){
 
   const RE=6371, S=1/RE, MU=398600.4418;     // Earth radius (km), km -> scene units, Earth gravitational parameter
   const MAX_ACTIVE=2500, MAX_DEBRIS=1500;    // dots drawn, to keep the page smooth
@@ -354,9 +376,27 @@ footer h2{margin:0 auto 16px;max-width:none}
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(45,1,0.01,200);
   camera.position.set(0,1.6,4);
-  const controls=new THREE.OrbitControls(camera,renderer.domElement);
-  controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.06;
-  controls.minDistance=1.5;controls.maxDistance=16;controls.autoRotateSpeed=.6;
+  // Small built-in orbit controls: drag to rotate, wheel to zoom
+  const controls=(function(){
+    const el=renderer.domElement,o={autoRotate:false};
+    let th=0.4,ph=1.2,dist=4.3,vt=0,vp=0,drag=null;
+    el.style.touchAction='none';
+    el.addEventListener('pointerdown',function(e){drag=[e.clientX,e.clientY];vt=vp=0;try{el.setPointerCapture(e.pointerId);}catch(_){}});
+    el.addEventListener('pointermove',function(e){
+      if(!drag)return;
+      vt=-(e.clientX-drag[0])*.005*(dist/4);vp=-(e.clientY-drag[1])*.005*(dist/4);
+      th+=vt;ph=Math.min(3.09,Math.max(.05,ph+vp));drag=[e.clientX,e.clientY];
+    });
+    const end=function(){drag=null;};
+    el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+    el.addEventListener('wheel',function(e){e.preventDefault();dist=Math.min(16,Math.max(1.5,dist*Math.exp(e.deltaY*.001)));},{passive:false});
+    o.update=function(){
+      if(!drag){th+=vt;ph=Math.min(3.09,Math.max(.05,ph+vp));vt*=.92;vp*=.92;if(o.autoRotate)th+=.003;}
+      camera.position.set(dist*Math.sin(ph)*Math.sin(th),dist*Math.cos(ph),dist*Math.sin(ph)*Math.cos(th));
+      camera.lookAt(0,0,0);
+    };
+    return o;
+  })();
 
   function resize(){
     const w=box.clientWidth,h=box.clientHeight;
@@ -582,6 +622,7 @@ footer h2{margin:0 auto 16px;max-width:none}
   }).catch(err=>{statusEl.textContent='Could not load orbital data: '+err.message;});
 
   requestAnimationFrame(frame);
+  }
 })();
 
 // Pipeline tabs
